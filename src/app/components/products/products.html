@@ -6,8 +6,9 @@
   <label class="form-label">Categories</label>
 
   <select class="form-select w-25 mx-auto" [(ngModel)]="selectedCatId">
-    @for (cat of categories; track cat.id) {
-      <option [value]="cat.id">{{ cat.name }}</option>
+    <option [ngValue]="0">All</option>
+    @for (cat of displayCategories; track cat.id) {
+      <option [ngValue]="cat.id">{{ cat.name }}</option>
     }
   </select>
 </div>
@@ -15,67 +16,69 @@
 <!-- Products Grid -->
 <div class="container">
   <div class="row g-3">
-    @for (prd of products; track prd.id) {
-      @if (selectedCatId == 0 || prd.catId == selectedCatId) {
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3 d-flex">
-          <div
-            class="card w-100 shadow-sm"
-            appHighlight
-            defualtColor="#ffffff"
-            highlightColor="#e9f7fb"
-            style="border-radius: 10px; overflow: hidden"
-          >
-            <!-- Image -->
-            <img [src]="prd.imgUrl" class="card-img-top" style="height: 160px; object-fit: cover" />
+    @for (prd of getFilteredProducts(); track prd.id) {
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3 d-flex">
+        <div
+          class="card w-100 shadow-sm"
+          appHighlight
+          defualtColor="#ffffff"
+          highlightColor="#e9f7fb"
+          style="border-radius: 10px; overflow: hidden"
+        >
+          <!-- Image -->
+          <img [src]="prd.imgUrl" class="card-img-top" style="height: 160px; object-fit: cover" />
 
-            <div class="card-body p-2">
-              <!-- Name -->
-              <h6 class="card-title mb-1">
-                {{ prd.name | shorten: 4 }}
-              </h6>
+          <div class="card-body p-2">
+            <!-- Name -->
+            <h6 class="card-title mb-1">
+              {{ prd.name | shorten: 4 }}
+            </h6>
 
-              <!-- Prices -->
-              <p class="small text-muted mb-1">
-                {{ prd.price | currency: 'EUR' : 'code' }}
-              </p>
+            <!-- Prices -->
+            <p class="small text-muted mb-1">
+              {{ prd.price | currency: 'EUR' : 'code' }}
+            </p>
 
-              <p class="small text-success mb-1">
-                {{ prd.price | discount | currency: 'EUR' : 'code' }}
-              </p>
+            <p class="small text-success mb-1">
+              {{ prd.price | discount | currency: 'EUR' : 'code' }}
+            </p>
 
-              <p class="small text-primary mb-1">
-                {{ prd.price | discount: 20 | currency: 'EUR' : 'code' }}
-              </p>
+            <p class="small text-primary mb-1">
+              {{ prd.price | discount: 20 | currency: 'EUR' : 'code' }}
+            </p>
 
-              <!-- Quantity -->
-              @switch (prd.quantity) {
-                @case (0) {
-                  <p class="small text-danger mb-1">Out of stock</p>
-                }
-                @case (1) {
-                  <p class="small text-warning mb-1">Last item</p>
-                }
-                @default {
-                  <p class="small mb-1">Qty: {{ prd.quantity }}</p>
-                }
+            <!-- Quantity -->
+            @switch (prd.quantity) {
+              @case (0) {
+                <p class="small text-danger mb-1">Out of stock</p>
               }
+              @case (1) {
+                <p class="small text-warning mb-1">Last item</p>
+              }
+              @default {
+                <p class="small mb-1">Qty: {{ prd.quantity }}</p>
+              }
+            }
 
-              <!-- Input -->
-              <input type="number" class="form-control form-control-sm mb-2" #quantityInp />
+            <!-- Input -->
+            <input type="number" class="form-control form-control-sm mb-2" #quantityInp />
 
-              <!-- Button -->
-              <button
-                class="btn btn-success btn-sm w-100"
-                appDisableAfterClick
-                (click)="buy(prd.price, quantityInp.value)"
-                [disabled]="prd.quantity == 0"
-              >
-                Buy
-              </button>
-            </div>
+            <!-- Buttons -->
+            <button
+              class="btn btn-success btn-sm w-100 mb-2"
+              appDisableAfterClick
+              (click)="buy(prd.price, quantityInp.value)"
+              [disabled]="prd.quantity == 0"
+            >
+              Register
+            </button>
+
+            <a class="btn btn-outline-primary btn-sm w-100" [routerLink]="['/course', prd.id]">
+              Details
+            </a>
           </div>
         </div>
-      }
+      </div>
     } @empty {
       <h4 class="text-center">No products to view</h4>
     }

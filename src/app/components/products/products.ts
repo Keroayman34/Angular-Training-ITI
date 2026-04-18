@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { IProduct } from '../../models/iproduct';
 import { ICategory } from '../../models/icategory';
 import { FormsModule } from '@angular/forms';
@@ -11,10 +11,13 @@ import {
   TitleCasePipe,
   UpperCasePipe,
 } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Highlight } from '../../directives/highlight';
 import { ShortenPipe } from '../../pipes/shorten-pipe';
 import { DiscountPipe } from '../../pipes/discount-pipe';
-import { DisableAfterClick } from '../../directives/disable-after-click'; // NEW
+import { DisableAfterClick } from '../../directives/disable-after-click';
+import { CoursesService } from '../../services/courses.service';
+import { CategoriesService } from '../../services/categories.service';
 
 @Component({
   selector: 'app-products',
@@ -30,76 +33,52 @@ import { DisableAfterClick } from '../../directives/disable-after-click'; // NEW
     CurrencyPipe,
     ShortenPipe,
     DiscountPipe,
-    DisableAfterClick, // NEW
+    DisableAfterClick,
+    RouterLink,
   ],
   templateUrl: './products.html',
   styleUrl: './products.css',
 })
-export class Products {
+export class CoursesComponent implements OnInit {
   totalOrderPrice: number = 0;
   selectedCatId: number = 0;
   date = new Date();
 
-  products: IProduct[] = [
-    {
-      id: 1,
-      name: 'Laptop',
-      imgUrl:
-        'https://fastly.picsum.photos/id/842/200/200.jpg?hmac=RW9iEgAYLKwoinQWSz_zrZHyOwmVEgqvoZTPebkRGMM',
-      price: 1200,
-      quantity: 10,
-      catId: 1,
-    },
-    {
-      id: 2,
-      name: 'Mouse',
-      imgUrl: 'https://picsum.photos/200?random=2',
-      price: 25,
-      quantity: 0,
-      catId: 1,
-    },
-    {
-      id: 3,
-      name: 'T-Shirt',
-      imgUrl: 'https://picsum.photos/200?random=3',
-      price: 30,
-      quantity: 1,
-      catId: 2,
-    },
-    {
-      id: 4,
-      name: 'Jeans',
-      imgUrl: 'https://picsum.photos/200?random=4',
-      price: 70,
-      quantity: 25,
-      catId: 2,
-    },
-    {
-      id: 5,
-      name: 'Coffee Mug',
-      imgUrl: 'https://picsum.photos/200?random=5',
-      price: 12,
-      quantity: 0,
-      catId: 3,
-    },
-    {
-      id: 6,
-      name: 'Notebook',
-      imgUrl: 'https://picsum.photos/200?random=6',
-      price: 8,
-      quantity: 100,
-      catId: 3,
-    },
-  ];
+  products: IProduct[] = [];
+  categories: ICategory[] = [];
+  displayCategories: ICategory[] = [];
 
-  categories: ICategory[] = [
-    { id: 0, name: 'All' },
-    { id: 1, name: 'Electronics' },
-    { id: 2, name: 'Clothing' },
-    { id: 3, name: 'Stationery' },
-  ];
+  constructor(
+    private coursesService: CoursesService,
+    private categoriesService: CategoriesService,
+  ) {}
 
-  buy(price: number, quantity: string) {
-    this.totalOrderPrice += price * +quantity;
+  ngOnInit(): void {
+    this.categories = this.categoriesService.getAllCategories();
+    this.products = this.coursesService.getAllCourses();
+
+    const hasAllCategory: boolean = this.categories.some((cat) => cat.id === 0);
+    if (!hasAllCategory) {
+      this.categories = [{ id: 0, name: 'All' }, ...this.categories];
+    }
+
+    this.displayCategories = this.categories.filter((cat) => cat.id !== 0);
+  }
+
+  getFilteredProducts(): IProduct[] {
+    if (this.selectedCatId === 0) {
+      return this.products;
+    }
+
+    return this.products.filter((course: IProduct) => course.catId === this.selectedCatId);
+  }
+
+  buy(price: number, quantity: string): void {
+    const qty: number = Number(quantity);
+    if (Number.isNaN(qty) || qty <= 0) {
+      return;
+    }
+
+    this.totalOrderPrice += price * qty;
   }
 }

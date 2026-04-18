@@ -1,0 +1,16 @@
+<div class="container py-4">
+  @if (course) {
+    <div class="card course-details-card mx-auto shadow-sm">
+      <img [src]="course.imgUrl" class="card-img-top" [alt]="course.name" />
+      <div class="card-body">
+        <h3 class="card-title mb-3">{{ course.name }}</h3>
+        <p class="mb-2"><strong>Instructor:</strong> {{ course.instructor }}</p>
+        <p class="mb-2"><strong>Price:</strong> {{ course.price | currency: 'EUR' : 'code' }}</p>
+        <p class="mb-3"><strong>Seats:</strong> {{ course.seats }}</p>
+        <a class="btn btn-outline-primary" routerLink="/courses">Back to Courses</a>
+      </div>
+    </div>
+  } @else {
+    <div class="alert alert-warning text-center" role="alert">Course not found.</div>
+  }
+</div>
