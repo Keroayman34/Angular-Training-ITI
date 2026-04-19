@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { IProduct } from '../../models/iproduct';
 import { CoursesService } from '../../services/courses.service';
+import { Subscription, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-course-details',
@@ -11,8 +12,9 @@ import { CoursesService } from '../../services/courses.service';
   templateUrl: './course-details.html',
   styleUrl: './course-details.css',
 })
-export class CourseDetailsComponent implements OnInit {
+export class CourseDetailsComponent implements OnInit, OnDestroy {
   course: IProduct | undefined;
+  private readonly subscriptions: Subscription[] = [];
 
   constructor(
     private activatedRoute: ActivatedRoute,
@@ -20,16 +22,29 @@ export class CourseDetailsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.activatedRoute.paramMap.subscribe((params) => {
-      const idParam: string | null = params.get('id');
-      const courseId: number = Number(idParam);
+    const routeSub = this.activatedRoute.paramMap
+      .pipe(
+        switchMap((params) => {
+          const idParam: string | null = params.get('id');
+          const courseId: number = Number(idParam);
 
-      if (!idParam || Number.isNaN(courseId)) {
-        this.course = undefined;
-        return;
-      }
+          if (!idParam || Number.isNaN(courseId)) {
+            return of(undefined);
+          }
 
-      this.course = this.coursesService.getCourseByID(courseId);
-    });
+          return this.coursesService.getCourseById(courseId);
+        }),
+      )
+      .subscribe({
+        next: (course) => {
+          this.course = course;
+        },
+      });
+
+    this.subscriptions.push(routeSub);
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 }

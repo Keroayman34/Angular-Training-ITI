@@ -1,11 +1,16 @@
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, map, catchError, of } from 'rxjs';
 import { IProduct } from '../models/iproduct';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CoursesService {
-  private readonly courses: IProduct[] = [
+  private readonly baseUrl = environment.apiUrl;
+
+  private readonly fallbackCourses: IProduct[] = [
     {
       id: 1,
       name: 'Angular Fundamentals',
@@ -69,19 +74,91 @@ export class CoursesService {
     },
   ];
 
-  getAllCourses(): IProduct[] {
-    return [...this.courses];
+  constructor(private http: HttpClient) {}
+
+  getAllCourses(): Observable<IProduct[]> {
+    console.log('Fetching all courses from:', `${this.baseUrl}/courses`);
+    return this.http.get<IProduct[]>(`${this.baseUrl}/courses`).pipe(
+      map((courses) => {
+        console.log('Courses received:', courses);
+        return courses.map((course) => this.normalizeCourse(course));
+      }),
+      catchError((err) => {
+        console.warn('Failed to fetch courses, using fallback data:', err);
+        return of(this.fallbackCourses.map((course) => this.normalizeCourse(course)));
+      }),
+    );
   }
 
-  getCoursesByCatID(catID: number): IProduct[] {
-    if (catID === 0) {
+  getCoursesByCategoryId(catId: number): Observable<IProduct[]> {
+    if (catId === 0) {
       return this.getAllCourses();
     }
 
-    return this.courses.filter((course: IProduct) => course.catId === catID);
+    console.log('Fetching courses for category:', catId);
+    const params = new HttpParams().set('catId', String(catId));
+    return this.http.get<IProduct[]>(`${this.baseUrl}/courses`, { params }).pipe(
+      map((courses) => {
+        console.log('Filtered courses received:', courses);
+        return courses.map((course) => this.normalizeCourse(course));
+      }),
+      catchError((err) => {
+        console.warn('Failed to fetch filtered courses, using fallback data:', err);
+        const filtered = this.fallbackCourses.filter((course) => course.catId === catId);
+        return of(filtered.map((course) => this.normalizeCourse(course)));
+      }),
+    );
   }
 
-  getCourseByID(courseID: number): IProduct | undefined {
-    return this.courses.find((course: IProduct) => course.id === courseID);
+  getCourseById(id: number): Observable<IProduct> {
+    return this.http.get<IProduct>(`${this.baseUrl}/courses/${id}`).pipe(
+      map((course) => this.normalizeCourse(course)),
+      catchError((err) => {
+        console.warn('Failed to fetch course, using fallback data:', err);
+        const fallback = this.fallbackCourses.find((course) => course.id === id);
+        if (fallback) {
+          return of(this.normalizeCourse(fallback));
+        }
+        throw err;
+      }),
+    );
+  }
+
+  addCourse(
+    course: Omit<IProduct, 'id'> | { title: string; price: number; imgUrl: string; catId: number },
+  ): Observable<IProduct> {
+    const payload: Omit<IProduct, 'id'> = {
+      name: 'name' in course ? course.name : course.title,
+      instructor: 'instructor' in course ? course.instructor : 'Staff',
+      price: Number(course.price),
+      seats: 'seats' in course ? Number(course.seats) : 0,
+      quantity: 'quantity' in course ? Number(course.quantity) : 0,
+      imgUrl: course.imgUrl,
+      catId: Number(course.catId),
+    };
+
+    return this.http.post<IProduct>(`${this.baseUrl}/courses`, payload).pipe(
+      map((created) => this.normalizeCourse(created)),
+      catchError((err) => {
+        console.warn('Failed to add course to API, using local ID:', err);
+        const newCourse: IProduct = {
+          id: Math.max(...this.fallbackCourses.map((c) => c.id)) + 1,
+          ...payload,
+        };
+        this.fallbackCourses.push(newCourse);
+        return of(newCourse);
+      }),
+    );
+  }
+
+  private normalizeCourse(course: IProduct): IProduct {
+    return {
+      ...course,
+      id: Number(course.id),
+      price: Number(course.price),
+      seats: Number(course.seats),
+      quantity: Number(course.quantity),
+      catId: Number(course.catId),
+    };
   }
 }

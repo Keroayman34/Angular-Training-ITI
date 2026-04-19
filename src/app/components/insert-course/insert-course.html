@@ -1,0 +1,55 @@
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 520px">
+    <div class="card-body">
+      <h3 class="card-title mb-3">Add New Course</h3>
+
+      <form (ngSubmit)="addCourse()">
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input
+            type="text"
+            class="form-control"
+            name="title"
+            [(ngModel)]="newCourse.title"
+            required
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Price</label>
+          <input
+            type="number"
+            class="form-control"
+            name="price"
+            [(ngModel)]="newCourse.price"
+            min="1"
+            required
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Image URL</label>
+          <input
+            type="url"
+            class="form-control"
+            name="image"
+            [(ngModel)]="newCourse.imgUrl"
+            required
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Category</label>
+          <select class="form-select" name="categoryId" [(ngModel)]="newCourse.catId" required>
+            <option [ngValue]="0" disabled>Select category</option>
+            @for (cat of categories; track cat.id) {
+              <option [ngValue]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Save</button>
+      </form>
+    </div>
+  </div>
+</div>

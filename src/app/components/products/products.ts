@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { IProduct } from '../../models/iproduct';
 import { ICategory } from '../../models/icategory';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +18,7 @@ import { DiscountPipe } from '../../pipes/discount-pipe';
 import { DisableAfterClick } from '../../directives/disable-after-click';
 import { CoursesService } from '../../services/courses.service';
 import { CategoriesService } from '../../services/categories.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-products',
@@ -39,7 +40,7 @@ import { CategoriesService } from '../../services/categories.service';
   templateUrl: './products.html',
   styleUrl: './products.css',
 })
-export class CoursesComponent implements OnInit {
+export class CoursesComponent implements OnInit, OnDestroy {
   totalOrderPrice: number = 0;
   selectedCatId: number = 0;
   date = new Date();
@@ -48,29 +49,59 @@ export class CoursesComponent implements OnInit {
   categories: ICategory[] = [];
   displayCategories: ICategory[] = [];
 
+  private readonly subscriptions: Subscription[] = [];
+
   constructor(
     private coursesService: CoursesService,
     private categoriesService: CategoriesService,
   ) {}
 
   ngOnInit(): void {
-    this.categories = this.categoriesService.getAllCategories();
-    this.products = this.coursesService.getAllCourses();
+    const categoriesSub = this.categoriesService.getAllCategories().subscribe({
+      next: (categories) => {
+        console.log('Categories loaded in component:', categories);
+        this.categories = categories;
 
-    const hasAllCategory: boolean = this.categories.some((cat) => cat.id === 0);
-    if (!hasAllCategory) {
-      this.categories = [{ id: 0, name: 'All' }, ...this.categories];
-    }
+        const hasAllCategory: boolean = this.categories.some((cat) => cat.id === 0);
+        if (!hasAllCategory) {
+          this.categories = [{ id: 0, name: 'All' }, ...this.categories];
+        }
 
-    this.displayCategories = this.categories.filter((cat) => cat.id !== 0);
+        this.displayCategories = this.categories.filter((cat) => cat.id !== 0);
+        console.log('Display categories:', this.displayCategories);
+      },
+      error: (err) => {
+        console.error('Error loading categories:', err);
+      },
+    });
+
+    this.subscriptions.push(categoriesSub);
+    this.loadCourses(0);
   }
 
   getFilteredProducts(): IProduct[] {
-    if (this.selectedCatId === 0) {
-      return this.products;
-    }
+    return this.products;
+  }
 
-    return this.products.filter((course: IProduct) => course.catId === this.selectedCatId);
+  onCategoryChange(catId: number): void {
+    this.selectedCatId = catId;
+    this.loadCourses(catId);
+  }
+
+  private loadCourses(catId: number): void {
+    const courses$ = this.coursesService.getCoursesByCategoryId(catId);
+    const coursesSub = courses$.subscribe({
+      next: (courses) => {
+        console.log('Products loaded in component:', courses);
+        this.products = courses;
+      },
+      error: (err) => {
+        console.error('Error loading courses:', err);
+        this.products = [];
+      },
+    });
+
+    this.subscriptions.push(coursesSub);
   }
 
   buy(price: number, quantity: string): void {
@@ -80,5 +111,9 @@ export class CoursesComponent implements OnInit {
     }
 
     this.totalOrderPrice += price * qty;
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 }
